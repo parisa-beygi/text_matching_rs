@@ -6,8 +6,8 @@ train_file = codecs.open(data_path + 'amazon_train.txt', 'w', encoding='utf8')
 train_file.write('label q1 q2\n')
 
 
-def get_match(user_text, item_text, rating):
-    train_file.write(str(rating) + ' ' + user_text + ' ' + item_text + '\n')
+def get_match(user_id, item_id, rating):
+    train_file.write(str(rating) + ' ' + user_id + ' ' + item_id + '\n')
 
 
 
