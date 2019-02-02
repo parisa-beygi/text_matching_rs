@@ -23,15 +23,16 @@ def get_profile_text(user_id, text_list):
     # user_text_file.write(user_id + ' ')
     for text in text_list:
         for word in text:
-            word_vec = model[word]
+            if word in model.wv.vocab:
+                word_vec = model[word]
 
-            # get the word's embedding and save it to word2vec along with the word's id
-            word2vec_file.write(word_index + ' ')
-            np.savetxt(word2vec_file, word_vec, delimiter=' ')
-            word2vec_file.write('\n')
+                # get the word's embedding and save it to word2vec along with the word's id
+                word2vec_file.write(str(word_index )+ ' ')
+                np.savetxt(word2vec_file, word_vec, delimiter=',')
+                word2vec_file.write('\n')
 
-            # append to the word id list of the text
-            # user_text_file.write(word_index + ' ')
+                # append to the word id list of the text
+                # user_text_file.write(word_index + ' ')
 
 
 
@@ -43,7 +44,7 @@ def get_profile_text(user_id, text_list):
 
 print ('Loading data...')
 
-input = open('resources/data.pkl', 'rb')
+input = open('resources/incomplete_data.pkl', 'rb')
 user_dict = pickle.load(input)
 item_dict = pickle.load(input)
 
