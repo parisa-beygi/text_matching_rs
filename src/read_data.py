@@ -34,12 +34,6 @@ def read(path):
 
         item = item_dict.get_profile(item_id)
         item.update(rev, user_id, rating)
-
-        #TODO: should be removed
-        if j > 3:
-            return user_dict, item_dict
-
-
     return user_dict, item_dict
 
 if __name__== '__main__':
@@ -49,8 +43,7 @@ if __name__== '__main__':
 
     user_dict, item_dict = read(path)
 
-    # TODO: should be changed to data.pkl
-    with open("resources/incomplete_data.pkl", "wb") as structured_data:
+    with open("resources/data.pkl", "wb") as structured_data:
         pickle.dump(user_dict, structured_data)
         pickle.dump(item_dict, structured_data)
 
