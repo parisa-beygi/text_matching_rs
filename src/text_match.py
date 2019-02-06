@@ -6,6 +6,8 @@ from collections import Counter
 import gensim
 import numpy as np
 
+RATING_LIMIT = 3
+
 print ('Loading the model...')
 model = gensim.models.KeyedVectors.load_word2vec_format('/home/parisa/projects/models/GoogleNews-vectors-negative300.bin', binary = True)
 print ('Loaded the model!')
@@ -17,7 +19,7 @@ word2vec_file = codecs.open(data_path + 'word2vec.txt', 'w', encoding='utf8')
 test_wv_file = codecs.open(data_path + 'test_wv.txt', 'w', encoding='utf8')
 
 train_file.write('label q1 q2\n')
-user_text_file.write('qid words\n')
+user_text_file.write('qid\twords\n')
 word_index = 0
 
 regex = re.compile('[,\.!?]')
@@ -28,7 +30,7 @@ dict = Counter()
 
 
 def save_profile_word(word, profile_file):
-    profile_file.write(str(vocab[word]) + '(' + word + ')' + ' ')
+    profile_file.write(str(vocab[word]) + ' ')
 
 
 def process_word_embedding(file, word):
@@ -45,22 +47,25 @@ def process_word_embedding(file, word):
 
 
 def get_match(user_id, item_id, rating):
-    train_file.write(str(rating) + ' ' + user_id + ' ' + item_id + '\n')
+    match_score = 1 if rating >= RATING_LIMIT else 0
+    train_file.write(str(match_score) + ' ' + user_id + ' ' + item_id + '\n')
 
 
-def get_profile_text(profile_id, text_list, profile_file, wv_file = None):
+def get_profile_text(profile_id, all_text, profile_file, wv_file = None):
     # user_text_file.write(user_id + ' ')
-    print (profile_id)
-    print (len(text_list))
+    # print (profile_id)
+    # print ('text_list len is ' + str(len(text_list)))
     # for text in text_list:
-    all_text = ' '.join(text_list)
+    if isinstance(all_text, list):
+        all_text = ' '.join(all_text)
     all_text = regex.sub(' ', all_text)
+
     words = all_text.strip().split()
-    words = [w.lower() for w in words]
+    # words = [w.lower() for w in words]
 
     dict.update(words)
 
-    profile_file.write(profile_id + ' ')
+    profile_file.write(profile_id + '\t')
     for word in words:
         if word in model.wv.vocab:
             process_word_embedding(wv_file, word)
@@ -82,47 +87,47 @@ def get_profile_text(profile_id, text_list, profile_file, wv_file = None):
 
 
 
+if __name__== '__main__':
 
 
+    print ('Loading data...')
 
-print ('Loading data...')
+    input = open('resources/data.pkl', 'rb')
+    user_dict = pickle.load(input)
+    item_dict = pickle.load(input)
 
-input = open('resources/incomplete_data.pkl', 'rb')
-user_dict = pickle.load(input)
-item_dict = pickle.load(input)
+    print ('Loaded data!')
 
-print ('Loaded data!')
+    users = user_dict.get_dict()
 
-users = user_dict.get_dict()
+    print ('Started users...')
+    for user in users:
+        for index in range(user.num_of_reviews()):
+            review_text, rating, item_id = user.get_review_details(index)
+            # item = item_dict.get_profile(item_id)
+            user_id = user.profile_id
+            # item_id = item.profile_id
+            get_match(user_id, item_id, rating)
 
-print ('Started users...')
-for user in users:
-    for index in range(user.num_of_reviews()):
-        review_text, rating, item_id = user.get_review_details(index)
-        # item = item_dict.get_profile(item_id)
-        user_id = user.profile_id
-        # item_id = item.profile_id
-        get_match(user_id, item_id, rating)
+            get_profile_text(user_id, user.text_list, user_text_file, wv_file = word2vec_file)
+            # get_profile_text(item.text_list)
 
-        get_profile_text(user_id, user.text_list, user_text_file, wv_file = word2vec_file)
-        # get_profile_text(item.text_list)
+        # break
 
-    # break
+    items = item_dict.get_dict()
 
-items = item_dict.get_dict()
+    for item in items:
+        get_profile_text(item.profile_id, item.text_list, user_text_file)
 
-for item in items:
-    get_profile_text(item.profile_id, item.text_list, item_text_file)
+    print ('calculating vocab size...\n')
+    sum = 0
 
+    for w, count in dict.most_common():
+        print (w + ' ' + str(count))
+        if w in model.wv.vocab:
+            sum +=1
 
-sum = 0
+    print ('vocab size:\n')
+    print (sum)
 
-for w, count in dict.most_common():
-    print (w + ' ' + str(count))
-    if w in model.wv.vocab:
-        sum +=1
-
-print ('vocab size:\n')
-print (sum)
-
-print ('____________')
+    print ('____________')

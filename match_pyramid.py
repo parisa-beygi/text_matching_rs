@@ -6,6 +6,7 @@ Created on Wed Jun 13 14:08:24 2018
 """
 
 import numpy as np
+import codecs
 import pandas as pd
 from keras.preprocessing.sequence import pad_sequences
 from keras.layers import Input, Embedding, BatchNormalization, Activation
@@ -25,18 +26,48 @@ def get_ids(qids):
         ids.append(t_)
     return np.asarray(ids)
 
+def get(file):
+    id1s = []
+    id2s = []
+    labels = []
+    for line in file:
+        contents = line.strip().split()
+        if 'label' not in contents:
+            id1s.append(contents[1])
+            id2s.append(contents[2])
+            labels.append(contents[0])
+
+    return labels, id1s, id2s
+
+def getq(file):
+    qs = []
+    for line in file:
+        contents = line.strip().split('\t')
+        if 'qid' not in contents:
+            qs.append(tuple((contents[0], contents[1])))
+
+    return qs
+
+
 def get_texts(file_path, question_path, mode=None):
-    qes = pd.read_csv(question_path, sep='	', dtype=str)
-    qes = qes.dropna()
-    file = pd.read_csv(file_path, sep=' ', dtype=str)
-    file = file.dropna()
-    q1id, q2id = file['q1'], file['q2']
-    id1s, id2s = get_ids(q1id), get_ids(q2id)
+#    qes = pd.read_csv(question_path, sep='	', dtype=str)
+#    qes = qes.dropna()
+#    file = pd.read_csv(file_path, sep=' ', dtype=str)
+#    file = file.dropna()
+#    q1id, q2id = file['q1'], file['q2']
+#    id1s, id2s = get_ids(q1id), get_ids(q2id)
+    file = codecs.open(file_path, 'r', encoding='utf8')
+    q_file = codecs.open(question_path, 'r', encoding='utf8')
+
+    labels, id1s, id2s = get(file)
+    qes = getq(q_file)
     all_words = {}
     for i in range(len(qes)):
-        all_words[qes.iloc[i,0]]=qes.iloc[i,1]
+        all_words[qes[i][0]]=qes[i][1]
     texts1 = []
     texts2 = []
+    print (mode)
+    print (len(id1s))
     for t_ in id1s:
         texts1.append(all_words[t_].split(' '))
     for t_ in id2s:
@@ -44,16 +75,16 @@ def get_texts(file_path, question_path, mode=None):
     if mode=='test':
         return texts1, texts2
     else:
-        labels=list(file['label'])
+        #labels=list(file['label'])
         labels=to_categorical(np.array(labels), num_classes=2)
 #        label_smooth=0.1
 #        labels=labels.clip(label_smooth/2., 1.-label_smooth)
         return labels, texts1, texts2
 
 
-
-fit_max_len=50
-embed_size=50
+# Todo: default is 50
+fit_max_len=300
+embed_size=300
 num_conv2d_layers=1
 filters_2d=[16,32]
 kernel_size_2d=[[3,3], [3,3]]
@@ -62,26 +93,46 @@ dropout_rate=0.5
 batch_size=32
   
 
-TRAIN_PATH = 'data/qouraqp/relation_train.txt'
-VALID_PATH = 'data/qouraqp/relation_valid.txt'
-TEST_PATH = 'data/qouraqp/relation_test.txt'
-QUESTION_PATH = 'data/qouraqp/corpus_preprocessed.txt'
-WORD_EMBED='data/qouraqp/embed_glove_d50'
+# Todo
+TRAIN_PATH = 'data/msrp/msrp_train.txt'
+VALID_PATH = 'data/msrp/msrp_valid.txt'
+TEST_PATH = 'data/msrp/msrp_test.txt'
+QUESTION_PATH = 'data/msrp/msrp_data.txt'
+WORD_EMBED='data/msrp/word2vec.txt'
 use_embed=False
 model_path='checkpoints/mp_lrs.h5'
 log_path='checkpoints/mp_lrs.txt'
 sub_path='submission_mp_lrs.csv'
 
+#TRAIN_PATH = 'data/qouraqp/relation_train.txt'
+#VALID_PATH = 'data/qouraqp/relation_valid.txt'
+#TEST_PATH = 'data/qouraqp/relation_test.txt'
+#QUESTION_PATH = 'data/qouraqp/corpus_preprocessed.txt'
+#WORD_EMBED='data/qouraqp/embed_glove_d50'
+#use_embed=False
+#model_path='checkpoints/mp_lrs.h5'
+#log_path='checkpoints/mp_lrs.txt'
+#sub_path='submission_mp_lrs.csv'
+
+
 print('Load files...')
 train_labels, train_texts1, train_texts2 = get_texts(TRAIN_PATH, QUESTION_PATH, 'train')
+# Todo
 valid_labels, valid_texts1, valid_texts2 = get_texts(VALID_PATH, QUESTION_PATH, 'valid')
+print ('pppppppppppppppppppppppppppppppp')
+print (len(valid_texts1))
 test_texts1, test_texts2 = get_texts(TEST_PATH, QUESTION_PATH, 'test')
 
 print('Prepare word embedding...')
 # pad the docs
 padded_train_texts1=pad_sequences(train_texts1, maxlen=fit_max_len, padding='post')
 padded_train_texts2=pad_sequences(train_texts2, maxlen=fit_max_len, padding='post')
+# Todo
 padded_valid_texts1=pad_sequences(valid_texts1, maxlen=fit_max_len, padding='post')
+print ('chitoooooo')
+print (type((valid_texts1)))
+print (len(valid_texts1))
+print (padded_valid_texts1)
 padded_valid_texts2=pad_sequences(valid_texts2, maxlen=fit_max_len, padding='post')
 padded_test_texts1=pad_sequences(test_texts1, maxlen=fit_max_len, padding='post')
 padded_test_texts2=pad_sequences(test_texts2, maxlen=fit_max_len, padding='post')
@@ -92,6 +143,7 @@ vocab_size=len(word_embedding)
 
 print('Split train and valid set...')
 train_labels, train_texts1, train_texts2 = train_labels, padded_train_texts1, padded_train_texts2
+# Todo
 valid_labels, valid_texts1, valid_texts2 = valid_labels, padded_valid_texts1, padded_valid_texts2
 
 print('Build model...')
@@ -156,21 +208,42 @@ def test_generator(texts1, texts2, batch_size, min_index, max_index):
         yield {'query':samples1, 'doc':samples2}
             
 train_gen=generator(train_texts1, train_texts2, train_labels, batch_size=batch_size, min_index=0, max_index=len(train_texts1))
+# Todo
 valid_gen=generator(valid_texts1, valid_texts2, valid_labels, batch_size=batch_size, min_index=0, max_index=len(valid_texts1))
 test_gen=test_generator(padded_test_texts1, padded_test_texts2, batch_size=1, min_index=0, max_index=len(test_texts1))
 
 print('Train classifier...')
+# Todo
+print ('injaaaaaaaaaa')
+print (len(valid_texts1))
+print (batch_size)
+print (len(valid_texts1)//batch_size)
 history=model.fit_generator(train_gen, epochs=10, steps_per_epoch=len(train_texts1)//batch_size,
                   validation_data=valid_gen, validation_steps=len(valid_texts1)//batch_size, verbose=1,
-                  callbacks=[ModelCheckpoint(model_path, monitor='val_loss', mode='min', save_best_only=True), 
-#                             EarlyStopping(monitor='val_loss', patience=3), 
+                  callbacks=[ModelCheckpoint(model_path, monitor='val_loss', mode='min', save_best_only=True),
+#                             EarlyStopping(monitor='val_loss', patience=3),
                              CSVLogger(log_path)])
 
-#print('Predict...')
-#model=load_model(model_path)
-    #preds=model.predict_generator(test_gen, steps=len(test_texts1))
+# history=model.fit_generator(train_gen, epochs=10, steps_per_epoch=len(train_texts1)//batch_size,
+#                   verbose=1,
+#                   callbacks=[ModelCheckpoint(model_path, monitor='loss', mode='min', save_best_only=True),
+# #                             EarlyStopping(monitor='val_loss', patience=3),
+#                              CSVLogger(log_path)
+#                              ])
 
+# Todo
+print('Predict...')
+model=load_model(model_path)
+preds=model.predict_generator(test_gen, steps=len(test_texts1))
+#
+print ('predictions')
+print (len(preds))
+for p in preds:
+    print (p)
+
+# Todo
 print('Plot validation accuracy and loss...')
+print('Plot accuracy and loss...')
 import matplotlib.pyplot as plt
 acc=history.history['acc']
 val_acc=history.history['val_acc']
