@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Jun 13 14:08:24 2018
-
 @author: Parisa Beygi
 """
 
